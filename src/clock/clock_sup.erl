@@ -8,7 +8,7 @@
         ]).
 
 -export([
-        list_clock/0,
+        list_clocks/0,
         new_clock/2
         ]).
 
@@ -31,7 +31,7 @@ init([])->
                ],
   {ok, {SupFlags, ChildSpecs}}.
 
-list_clock() ->
+list_clocks() ->
   supervisor:which_children(?MODULE).
 
 new_clock(ClockName, Bpm) ->
@@ -40,6 +40,5 @@ new_clock(ClockName, Bpm) ->
                            id => ClockName,
                            start => { clock_mgr, start_link, [ClockName, Bpm] }
                           }).
-
 stop_clock(ClockPid) ->
   supervisor:terminate_child(?MODULE, ClockPid).

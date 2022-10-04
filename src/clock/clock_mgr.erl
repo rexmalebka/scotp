@@ -89,12 +89,15 @@ handle_cast(_Msg, State)->
 
 handle_info(run, State=#{ count:=Count, sched:=Scheds})->
   maps:foreach(fun(Ref, Func)->
+                   SeqParent = self(),
                    
                    spawn(fun()-> 
                              case erlang:apply(Func, [State]) of
                                unsched ->
-                                 clock:unsched(self(), Ref);
-                               _ -> ok
+                                 clock:unsched(SeqParent, Ref);
+                               
+                               X -> 
+                                 ok
                              end
                          end)
                end, Scheds),
@@ -106,7 +109,8 @@ handle_info(run, State=#{ count:=Count, sched:=Scheds})->
   
   {noreply, NewState};
 
-handle_info(_Msg, State)->
+handle_info(Msg, State)->
+  io:format("msg ~w~n",[Msg]),
   {noreply, State}.
 
 

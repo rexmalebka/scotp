@@ -22,8 +22,8 @@ init([]) ->
                  period => 1},
     ChildSpecs = [
                   #{
-                   id => sc,
-                   start => {sc, start_link, []}
+                    id => sc_mgr,
+                    start => {sc_mgr, start_link, []}
                    },
                   #{
                     id => clock_sup,
