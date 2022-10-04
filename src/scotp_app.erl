@@ -25,5 +25,3 @@ stop(_State) ->
     ok.
 
 %% internal functions
-load_buffers()->
-	666.
