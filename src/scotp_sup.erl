@@ -25,6 +25,10 @@ init([]) ->
                     id => sc_mgr,
                     start => {sc_mgr, start_link, []}
                    },
+		  #{
+		   id => repl_file_mgr,
+		   start => {repl_file_mgr, start_link, []}
+		   },
                   #{
                     id => clock_sup,
                     start => {clock_sup, start_link, []}

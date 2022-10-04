@@ -1,10 +1,15 @@
 -module(repl).
+-export([
+	watch/1
+	]).
 
 watch(Path) when is_list(Path) ->
 	case filelib:is_regular(Path) of
 		true ->
-			o;
+			gen_server:call(repl_file_mgr, {add, Path}),
+			{ok, Path};
 		false ->
-			{error, notsupported}
+			{error, notregularfile}
 	end.
+
 

@@ -3,31 +3,31 @@
 
 -export([start_link/0]).
 -export([
-	init/1,
-	handle_call/3,
-	handle_cast/2,
-	handle_info/2
+	 init/1,
+	 handle_call/3,
+	 handle_cast/2,
+	 handle_info/2
 	]).
 
 start_link()->
-	gen_server:start_link({local, SeqName}, ?MODULE, [], []).
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
 	State = #{},
+	timer:send_interval(200, eval),
 	{ok, State}.
 
 
-handle_call({watch, Path}, _From, State)->
-	{ok, TRef} = timer:send_interval(200, {repl, {file,  Path}}),
+handle_call({add, Path}, _From, State)->
 	NewState = maps:put(
-		     {file, Path},
+		     Path,
 		     #{
-		       ref => TRef,
+		       pid => spawn(fun()-> ok end),
 		       last => ""
 		      },
 		     State
 		    ),
-	{reply, Tref, NewState};
+	{reply, Path, NewState};
 
 handle_call(_Msg, _From, State)->
 	{reply, _Msg, State}.
@@ -38,34 +38,46 @@ handle_cast(_Msg, State)->
 	{noreply, State}.
 
 
-handle_info({repl, {file, Path}}, State)->
-	FileMap = maps:get({file,Path}, State),
-	NewFile = case filelib:is_regular(Path) of
-		true ->
-			case file:read(Path) of
-				{ok, Data} ->
-					case maps:get(last, FileMap) == Data of
-						true ->
-							FileMap;
-						false ->
-							file:eval(Path),
-							maps:put(
-							  last,
-							  Data,
-							  FileMap
-							 )
-					end;
-				{error, _ } ->
-					FileMap
-			end;	
-		false ->
-			FileMap
-	end,
-	NewState = maps:put({file,Path}, NewFile, State),
-	{noreply, NewState}.
+handle_info(eval, State)->
+	NewState = maps:map(fun(Path, FileState) ->
+					    case filelib:is_regular(Path) of
+						    true ->
+							    case file:read_file(Path) of
+								    {ok, Data} ->
+									    case maps:get(last, FileState) == Data of
+										    true ->
+											    FileState;
+										    false ->
+											    exit(maps:get(pid, FileState),kill),
+											    Pid = spawn_file(Path),
+											    maps:merge(
+											      FileState,
+											      #{
+												last => Data,
+												pid => Pid
+											       }
+											     )
+									    end;
+								    {error, _ } ->
+									    FileState
+							    end;
+						    false ->
+							    FileState
+					    end
+			    end,
+			    State
+			   ),
+
+	{noreply, NewState};
 
 handle_info(_Msg, State)->
 	{noreply, State}.
 
-
-
+spawn_file(Path)->
+	spawn(fun()->					       
+			      case file:eval(Path) of
+				      ok -> ok;
+				      {error, Reason} ->
+					      io:format("~p~n",[Reason])
+			      end
+	      end).

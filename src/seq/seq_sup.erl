@@ -37,6 +37,12 @@ init([]) ->
 	{ok, {SupFlags, ChildSpecs}}.
 
 load_default_buffers()->
+
+	io:format(
+	  "~s~n",[
+		  color:cyan("Loading seq sound bank...")
+		 ]
+	 ),
 	{ok, SoundDirectories} = file:list_dir("priv/soundbank"),
 	NewSD = [
 		 filename:join(
