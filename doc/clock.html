@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module clock</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module clock</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>clock API.
+
+
+<h2><a name="description">Description</a></h2>clock API.
+   This is a set of functions to create a clock process.
+   clock process run on x interval of time and process schedule tasks
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add-1">add/1</a></td><td>
+  the same as add(ClockName, 120).</td></tr>
+<tr><td valign="top"><a href="#add-2">add/2</a></td><td>
+  creates a new clock process, the name must be unique and used for further operations.</td></tr>
+<tr><td valign="top"><a href="#get-1">get/1</a></td><td>
+  Get current clock state.</td></tr>
+<tr><td valign="top"><a href="#remove-1">remove/1</a></td><td>
+  remove a clock process, stopping all the scheduled functions.</td></tr>
+<tr><td valign="top"><a href="#sched-2">sched/2</a></td><td>
+  schedule a function in a clock process, this will run each beat of time, name reference is obtained by function name.</td></tr>
+<tr><td valign="top"><a href="#sched-3">sched/3</a></td><td>
+  schedule a function in a clock process, this will run each beat of time, name reference necesary for unschedule.</td></tr>
+<tr><td valign="top"><a href="#set_bpm-2">set_bpm/2</a></td><td>
+  sets bpm for a clock process.</td></tr>
+<tr><td valign="top"><a href="#start-1">start/1</a></td><td>
+  set start status to a clock process, count will continue where it was left.</td></tr>
+<tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>
+  set stop status to a clock process, count will retain its value.</td></tr>
+<tr><td valign="top"><a href="#unsched-2">unsched/2</a></td><td>
+  unschedule a function in a clock process, you need to schedule it again if you want to use it.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add-1">add/1</a></h3>
+<div class="spec">
+<p><tt>add(ClockName::atom()) -&gt; {ok, pid()}</tt><br></p>
+<p> </p>
+</div><p>
+  the same as add(ClockName, 120).</p>
+
+<h3 class="function"><a name="add-2">add/2</a></h3>
+<div class="spec">
+<p><tt>add(ClockName::atom(), Bpm::non_neg_integer()) -&gt; {ok, pid()}</tt><br></p>
+<p> </p>
+</div><p>
+  creates a new clock process, the name must be unique and used for further operations.</p>
+
+<h3 class="function"><a name="get-1">get/1</a></h3>
+<div class="spec">
+<p><tt>get(Clock::atom() | pid()) -&gt; <a href="/home/rexmalebka/Documentos/erlang/scotp/doc/clock_mgr.html#type-clockState">clock_mgr:clockState()</a> | {error, not_found}</tt><br></p>
+<p> </p>
+</div><p>
+  Get current clock state</p>
+
+<h3 class="function"><a name="remove-1">remove/1</a></h3>
+<div class="spec">
+<p><tt>remove(Clock::atom() | pid()) -&gt; ok</tt><br></p>
+<p> </p>
+</div><p>
+  remove a clock process, stopping all the scheduled functions.</p>
+
+<h3 class="function"><a name="sched-2">sched/2</a></h3>
+<div class="spec">
+<p><tt>sched(Clock::atom() | pid(), Func::<a href="/home/rexmalebka/Documentos/erlang/scotp/doc/clock_mgr.html#type-clockCallback">clock_mgr:clockCallback()</a>) -&gt; ok | {error, not_found}</tt><br></p>
+<p> </p>
+</div><p>
+  schedule a function in a clock process, this will run each beat of time, name reference is obtained by function name.</p>
+
+<h3 class="function"><a name="sched-3">sched/3</a></h3>
+<div class="spec">
+<p><tt>sched(Clock::atom() | pid(), FuncName::atom(), Func::<a href="/home/rexmalebka/Documentos/erlang/scotp/doc/clock_mgr.html#type-clockCallback">clock_mgr:clockCallback()</a>) -&gt; ok | {error, not_found}</tt><br></p>
+<p> </p>
+</div><p>
+  schedule a function in a clock process, this will run each beat of time, name reference necesary for unschedule.</p>
+
+<h3 class="function"><a name="set_bpm-2">set_bpm/2</a></h3>
+<div class="spec">
+<p><tt>set_bpm(Clock::atom() | pid(), Bpm::non_neg_integer()) -&gt; ok | {error, not_found}</tt><br></p>
+<p> </p>
+</div><p>
+  sets bpm for a clock process.</p>
+
+<h3 class="function"><a name="start-1">start/1</a></h3>
+<div class="spec">
+<p><tt>start(Clock::atom() | pid()) -&gt; ok</tt><br></p>
+<p> </p>
+</div><p>
+  set start status to a clock process, count will continue where it was left.</p>
+
+<h3 class="function"><a name="stop-1">stop/1</a></h3>
+<div class="spec">
+<p><tt>stop(Clock::atom() | pid()) -&gt; ok</tt><br></p>
+<p> </p>
+</div><p>
+  set stop status to a clock process, count will retain its value</p>
+
+<h3 class="function"><a name="unsched-2">unsched/2</a></h3>
+<div class="spec">
+<p><tt>unsched(Clock::atom() | pid(), FuncName::atom()) -&gt; ok</tt><br></p>
+<p> </p>
+</div><p>
+  unschedule a function in a clock process, you need to schedule it again if you want to use it</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

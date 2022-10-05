@@ -1,173 +1,263 @@
+%%%-------------------------------------------------------------------
+%%% @doc clock API. \n
+%%% This is a set of functions to create a clock process.
+%%% clock process run on x interval of time and process schedule tasks
+%%% @end 
+%%%-------------------------------------------------------------------
+
 -module(clock).
+-author(rexmalebka).
 -export([
-	 new/1,
-	 new/2,
-
-	 change_bpm/1,
-	 change_bpm/2,
-
-	 sched/2,
-	 sched/3,
-
-	 unsched/1,
-	 unsched/2,
-
-	 get/0,
-	 get/1,
-
-	 start/0,
-	 start/1,
-
-	 stop/0,
-	 stop/1
+	 add/1, add/2
+	 , get/1
+	 , set_bpm/2
+	 , sched/2, sched/3
+	 , unsched/2
+	 , start/1, stop/1
+	 , remove/1
 	]).
 
-check_existing(ClockName)->
-	Clocks = maps:from_list(
-		   [{Name, Pid} || {Name, Pid, _, _ }<- clock_sup:list_clocks()]
-		  ),
-	case 
-		maps:get(ClockName, Clocks, noclock) of
-		noclock ->
-			{error, noclock};
-		Pid -> 
-			{ok, Pid}
+
+%% @doc
+%% the same as add(ClockName, 120).
+%% @end
+
+-spec add(ClockName::atom()) -> {ok,pid()}.
+
+add(ClockName) when is_atom(ClockName) ->
+	add(ClockName, 120).
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% creates a new clock process, the name must be unique and used for further operations.
+%% @end
+%%--------------------------------------------------------------------
+
+-spec add(ClockName::atom(), Bpm::non_neg_integer()) -> {ok,pid()}.
+
+add(ClockName, Bpm) when is_atom(ClockName) and (Bpm > 0) ->
+	case supervisor:start_child(
+	       clock_sup,
+	       #{
+		 id=> ClockName
+		 , start => { clock_mgr, start_link, [ClockName, Bpm] }
+		 , restart => transient
+		}) of
+		{ok, ClockPid} ->
+			gen_server:cast(ClockPid, start),
+			{ok, ClockPid};
+		{error, {already_started, ClockPid}} -> {ok, ClockPid}
 	end.
 
-new(ClockName) ->
-	new(ClockName, 120).
+%%--------------------------------------------------------------------
+%% @doc 
+%% Get current clock state
+%% @end
+%%--------------------------------------------------------------------
 
-new(ClockName, Bpm) when 
-	  is_atom(ClockName); Bpm > 0 ->
-	case check_existing(ClockName) of
-		{ok, Pid} -> 
-			{ok, Pid};
-		{error, noclock} ->
-			{ok,Pid} = clock_sup:new_clock(ClockName, Bpm),
-			gen_server:cast(Pid, start),
-			{ok, Pid}
-	end.
+-spec get(Clock::atom() | pid()) -> clock_mgr:clockState() | {error, not_found}.
 
-%% 
-
-change_bpm(Bpm) -> change_bpm(default, Bpm). 
-
-change_bpm(Clock, Bpm) when
-	  is_atom(Clock) and Bpm > 0 ->
-	case 
-		check_existing(Clock) of
-		{ok, Pid} ->
-			change_bpm(Pid, Bpm);
-		{error, noclock} -> 
-			{error, noclock}
+get(Clock) when is_atom(Clock) -> 
+	case lists:search(fun({ChildName, _,_,_}) when ChildName == Clock ->true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {_ClockName, ClockPid, _, _}} ->
+			gen_server:call(ClockPid, get);
+		false -> {error, not_found}
 	end;
 
-change_bpm(Clock, Bpm) when
-	  is_pid(Clock) and Bpm > 0 ->
-	gen_server:call(Clock, {bpm, Bpm}),
+get(Clock) when is_pid(Clock) -> 
+	case lists:search(fun({_, ChildPid,_,_}) when ChildPid == Clock -> true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {_ClockName, ClockPid, _, _}} ->
+			gen_server:call(ClockPid, get);
+		false -> {error, not_found}
+	end.
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% sets bpm for a clock process.
+%% @end
+%%--------------------------------------------------------------------
+
+-spec set_bpm(Clock::atom() | pid(), Bpm::non_neg_integer()) -> ok | {error, not_found}.
+
+set_bpm(Clock, Bpm) when is_atom(Clock) and (Bpm > 0) ->
+	case lists:search(fun({ChildName, _,_,_}) when ChildName == Clock ->true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {_ClockName, ClockPid, _, _}} ->
+			set_bpm(ClockPid, Bpm),
+			ok;
+		false -> {error, not_found}
+	end;
+
+set_bpm(Clock, Bpm) when is_pid(Clock) and (Bpm > 0) ->
+	gen_server:cast(Clock, {set, {bpm, Bpm}}),
+	ok.
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% schedule a function in a clock process, this will run each beat of time, name reference is obtained by function name.
+%% @end
+%%--------------------------------------------------------------------
+
+-spec sched(Clock::atom() | pid()
+	    , Func::clock_mgr:clockCallback() ) -> ok | {error, not_found}.
+
+sched(Clock, Func) when is_function(Func,1)->
+	{name, FuncName} = erlang:fun_info(Func, name),
+	sched(Clock, FuncName, Func).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% schedule a function in a clock process, this will run each beat of time, name reference necesary for unschedule.
+%% @end
+%%--------------------------------------------------------------------
+
+-spec sched(Clock::atom() | pid()
+	    , FuncName::atom()
+	    , Func::clock_mgr:clockCallback() ) -> ok | {error, not_found} .
+
+sched(Clock, FuncName, Func) when is_atom(Clock) and is_function(Func,1)->
+	case lists:search(fun({ChildName, _,_,_}) when ChildName == Clock ->true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {_ClockName, ClockPid, _, _}} ->
+			sched(ClockPid, FuncName, Func),
+			ok;
+		false -> {error, not_found}
+	end;
+
+sched(Clock, FuncName, Func) when is_pid(Clock) and is_function(Func,1)->
+	gen_server:cast(Clock, {sched, {FuncName, Func}}),
+	ok.
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% unschedule a function in a clock process, you need to schedule it again if you want to use it
+%% @end
+%%--------------------------------------------------------------------
+
+-spec unsched(Clock::atom() | pid()
+	      , FuncName::atom()) -> ok.
+
+unsched(Clock, Func) when is_function(Func,1)->
+	{name, FuncName} = erlang:fun_info(Func, name),
+	unsched(Clock, FuncName);
+
+unsched(Clock, FuncName) when is_atom(Clock) ->
+	case lists:search(fun({ChildName, _,_,_}) when ChildName == Clock ->true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {_ClockName, ClockPid, _, _}} ->
+			unsched(ClockPid, FuncName),
+			ok;
+		false -> ok
+	end;
+
+unsched(Clock, FuncName) when is_pid(Clock) ->
+	gen_server:cast(Clock, {unsched, FuncName}),
+	ok.
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% set start status to a clock process, count will continue where it was left.
+%% @end
+%%--------------------------------------------------------------------
+
+-spec start(Clock::atom()|pid()) -> ok.
+
+start(Clock) when is_atom(Clock) ->
+	case lists:search(fun({ChildName, _,_,_}) when ChildName == Clock ->true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {_ClockName, ClockPid, _, _}} ->
+			start(ClockPid),
+			ok;
+		false -> ok
+	end;
+
+start(Clock) when is_pid(Clock) ->
 	gen_server:cast(Clock, start),
-	{ok, Bpm}.
+	ok.
 
-%%
+%%--------------------------------------------------------------------
+%% @doc
+%% set stop status to a clock process, count will retain its value
+%% @end
+%%--------------------------------------------------------------------
 
-sched(Ref, Func) -> sched(default, Ref, Func).
-
-sched(Clock, Ref, Func)  when 
-	  is_atom(Clock) and is_function(Func)->
-
-	case 
-		check_existing(Clock) of
-		{ok, Pid} ->
-			case 
-				erlang:fun_info(Func, arity) of
-				{arity, 1} -> sched(Pid, Ref, Func);
-				_ -> {error, badarity}
-			end;
-
-		{error, noclock} -> 
-			{error, noclock}
-	end;
-
-sched(Clock, Ref, Func)  when is_function(Func) and is_pid(Clock) ->
-	case 
-		erlang:fun_info(Func, arity) of
-		{arity, 1} -> 
-			gen_server:cast(Clock, {sched, {Ref, Func}});
-		_ ->
-			{error, badarity}
-	end.
-
-
-unsched(Ref) -> unsched(default, Ref).
-
-unsched(Clock, Ref)  when 
-	  is_atom(Clock) ->
-	case 
-		check_existing(Clock) of
-		{ok, Pid} ->
-			unsched(Pid, Ref);
-		{error, noclock} -> 
-			{error, noclock}
-	end;
-
-unsched(Clock, Ref)  when is_pid(Clock) ->
-	gen_server:cast(Clock, {unsched, Ref}).
-
-
-
-get()-> erlang:apply(?MODULE, get, [default]).
-
-get(Clock) when is_atom(Clock) ->
-
-	case 
-		check_existing(Clock) of
-		{ok, Pid} ->
-			erlang:apply(?MODULE, get, [Pid] );
-		{error, noclock} -> 
-			{error, noclock}
-	end;
-
-get(Clock) when is_pid(Clock)->
-	gen_server:call(Clock, get).  
-
-
-
-
-start() ->
-	{ok, Pid} = check_existing(default),
-	start(Pid).
-
-start(Clock) when
-	  is_atom(Clock) ->
-	case 
-		check_existing(Clock) of
-		{ok, Pid} ->
-			start(Pid);
-		{error, noclock} -> 
-			{error, noclock}
-	end;
-
-start(Clock) when
-	  is_pid(Clock) ->
-	gen_server:cast(Clock, start).
-
-
-
-stop() ->
-	{ok, Pid} = check_existing(default),
-	stop(Pid).
+-spec stop(Clock::atom()|pid()) -> ok.
 
 stop(Clock) when is_atom(Clock) ->
-	case 
-		check_existing(Clock) of
-		{ok, Pid} ->
-			stop(Pid);
-		{error, noclock} -> 
-			{error, noclock}
+	io:format("asfdsf",[]),
+	case lists:search(fun({ChildName, _,_,_}) when ChildName == Clock ->true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {_ClockName, ClockPid, _, _}} ->
+			stop(ClockPid),
+			ok;
+		false -> ok
 	end;
 
 stop(Clock) when is_pid(Clock) ->
-	gen_server:call(Clock, stop).
+	io:format("stoping",[]),
+	gen_server:cast(Clock, stop),
+	ok.
 
 
+%%--------------------------------------------------------------------
+%% @doc
+%% remove a clock process, stopping all the scheduled functions.
+%% @end
+%%--------------------------------------------------------------------
+
+-spec remove(Clock::atom()|pid()) -> ok.
+
+remove(Clock) when is_atom(Clock) ->
+	case lists:search(fun({ChildName, _,_,_}) when ChildName == Clock ->true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {ClockName, ClockPid, _, _}} ->
+			gen_server:cast(ClockPid, terminate),
+			supervisor:terminate_child(clock_sup, ClockName),
+			supervisor:delete_child(clock_sup, ClockName);
+		false -> ok
+	end;
+
+remove(Clock) when is_pid(Clock) ->
+	case lists:search(fun({_, ChildPid,_,_}) when ChildPid == Clock -> true;
+			     (_) -> false
+			  end,
+			  supervisor:which_children(clock_sup) 
+			 ) of
+		{value, {ClockName, ClockPid, _, _}} ->
+			gen_server:cast(ClockPid, terminate),
+			supervisor:terminate_child(clock_sup, ClockName),
+			supervisor:delete_child(clock_sup, ClockName);
+		false -> ok
+	end.
 
