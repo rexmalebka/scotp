@@ -25,8 +25,8 @@ init([]) ->
 		 ]
 	 ),
 
-	sc:load_synthdef("priv/supercollider/scotp_seq.scsyndef"),
-	load_default_buffers(),
+	%sc:load_synthdef("priv/supercollider/scotp_seq.scsyndef"),
+	%load_default_buffers(),
 
 	SupFlags = #{strategy => one_for_all,
 		     intensity => 0,

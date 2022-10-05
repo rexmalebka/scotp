@@ -7,11 +7,6 @@
          init/1
         ]).
 
--export([
-        list_clocks/0,
-        new_clock/2
-        ]).
-
 start_link() ->
   process_flag(trap_exit, true),
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
@@ -30,15 +25,3 @@ init([])->
   ChildSpecs = [
                ],
   {ok, {SupFlags, ChildSpecs}}.
-
-list_clocks() ->
-  supervisor:which_children(?MODULE).
-
-new_clock(ClockName, Bpm) ->
-  supervisor:start_child(?MODULE,
-                         #{
-                           id => ClockName,
-                           start => { clock_mgr, start_link, [ClockName, Bpm] }
-                          }).
-stop_clock(ClockPid) ->
-  supervisor:terminate_child(?MODULE, ClockPid).

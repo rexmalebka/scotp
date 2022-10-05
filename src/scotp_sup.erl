@@ -5,6 +5,8 @@
 
 -module(scotp_sup).
 
+-author(rexmalebka).
+
 -behaviour(supervisor).
 
 -export([start_link/0]).
@@ -24,16 +26,16 @@ init([]) ->
                   #{
                     id => sc_mgr,
                     start => {sc_mgr, start_link, []}
-                   },
-		  #{
+                   }
+		  , #{
 		   id => repl_file_mgr,
 		   start => {repl_file_mgr, start_link, []}
-		   },
-                  #{
+		   }
+                  , #{
                     id => clock_sup,
                     start => {clock_sup, start_link, []}
-                   },
-                  #{
+                   }
+                  , #{
                     id => seq_sup,
                     start => {seq_sup, start_link, []}
                    }                
