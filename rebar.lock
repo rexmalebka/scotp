@@ -1,12 +1,15 @@
 {"1.2.0",
-[{<<"erlang_color">>,{pkg,<<"erlang_color">>,<<"1.0.0">>},0},
+[{<<"edown">>,{pkg,<<"edown">>,<<"0.8.4">>},0},
+ {<<"erlang_color">>,{pkg,<<"erlang_color">>,<<"1.0.0">>},0},
  {<<"osc">>,
   {git,"https://github.com/erlsci/osc",
        {ref,"f24623f937406acb3dac6c4aa8fc6a1822ea412c"}},
   0}]}.
 [
 {pkg_hash,[
+ {<<"edown">>, <<"C0ADDD5530A66E4C8B4A68FFDE122F7DD710EAED815492E438AAAFE63D4C76E1">>},
  {<<"erlang_color">>, <<"145FE1D2E65C4516E4F03FEFCA6C2F47EBAD5899D978D70382A5CFE643E4AC9E">>}]},
 {pkg_hash_ext,[
+ {<<"edown">>, <<"1CAF8F99BEE8B671EFA752EA163C9299A120BFC4A43820E1C5CE1BFDF63B4446">>},
  {<<"erlang_color">>, <<"6B17E5E589C8FEF540574C9EA32B67CEC2C8A44283AAFE474D6E5818FB3EE038">>}]}
 ].

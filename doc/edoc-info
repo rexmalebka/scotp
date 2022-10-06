@@ -1,4 +1,0 @@
-%% encoding: UTF-8
-{application,scotp}.
-{modules,[clock,clock_mgr,clock_sup,repl,repl_file_mgr,sc,sc_mgr,scotp_app,
-          scotp_sup,seq,seq_mgr,seq_sup]}.
