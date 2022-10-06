@@ -1,4 +1,12 @@
+%%%-------------------------------------------------------------------
+%%% @doc
+%%% 
+%%% @end
+%%%-------------------------------------------------------------------
+
 -module(sc).
+
+-author(rexmalebka).
 
 -export([
          load_synthdef/1,
@@ -9,6 +17,28 @@
 	 get_buffers/0,
          load_buffer/1
         ]).
+
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% add a synthdef https://doc.sccode.org/Reference/Server-Command-Reference.html#Synth%20Definition%20Commands  
+%% @end
+%%--------------------------------------------------------------------
+
+-spec add_synthdef(Path::list | iodata()) -> ok.
+
+add_synthdef(Path) when is_list-> 
+	AbsPath = filename:absname(Path),
+	case filelib:is_dir(AbsPath ) of
+		true ->
+			% read all the directory
+			
+			ok;
+		false ->
+	end.
+
+
 
 gen_id(IdMap)->
   Id = rand:uniform(8000),
